@@ -2,7 +2,7 @@ from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql.types import StructType, StringType
 
-# this string is not needed in pycharm console:
+# this string is not needed in pyspark console:
 # SparkSession available as 'spark'
 spark = SparkSession.builder.appName("my_spark_2.3").getOrCreate()
 
