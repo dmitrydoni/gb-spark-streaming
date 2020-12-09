@@ -1,0 +1,43 @@
+# First, locate Kafka directory with executable shell scripts - in this case, it's /usr/hdp/3.1.4.0-315/kafka/bin/
+
+# Create a topic with infinite retention time
+# Topic names can contain either a period (.) or underscore (_), but not both 
+/usr/hdp/3.1.4.0-315/kafka/bin/kafka-topics.sh --create --topic dd_topic1 --zookeeper bigdataanalytics-worker-1.novalocal:2181 --partitions 1 --replication-factor 1 --config retention.ms=-1
+
+# We can use any Kafka broker or a list of them (worker-0, worker-3 in this case)
+# As topic is not specific to a broker, upon execution of this command we will get an error message that a topic with this name already exists
+/usr/hdp/3.1.4.0-315/kafka/bin/kafka-topics.sh --create --topic dd_topic1 --zookeeper bigdataanalytics-worker-0.novalocal:2181,bigdataanalytics-worker-3.novalocal:2181 --partitions 3 --replication-factor 2 --config retention.ms=-1
+
+# Change topic retention time
+# This script is deprecated for altering topics, kafka-configs.sh should be used instead
+/usr/hdp/3.1.4.0-315/kafka/bin/kafka-topics.sh --zookeeper bigdataanalytics-worker-0.novalocal:2181 --alter --config retention.ms=1000000 --topic dd_topic1
+
+# Delete the topic
+# This command marks the topic for deletion. It will work only if delete.topic.enable is set to true
+/usr/hdp/3.1.4.0-315/kafka/bin/kafka-topics.sh --zookeeper bigdataanalytics-worker-0.novalocal:2181 --delete --topic dd_topic1
+
+# Create a new topic
+# We will have only one consumer, so there is no practical sense to create more than one partition
+/usr/hdp/3.1.4.0-315/kafka/bin/kafka-topics.sh --create --topic dd.topic1 --zookeeper bigdataanalytics-worker-2.novalocal:2181 --partitions 1 --replication-factor 1 --config retention.ms=-1
+
+# Update config (change retention time) for the topic using recommended script  
+/usr/hdp/3.1.4.0-315/kafka/bin/kafka-configs.sh --zookeeper bigdataanalytics-worker-1.novalocal:2181 --entity-type topics --entity-name dd.topic1 --alter --add-config retention.ms=1000000000 
+
+# Run producer for the topic
+# Port is changed because this command is handled by Kafka broker, not by zookeeper 
+# This command enables sending console input to the topic
+/usr/hdp/3.1.4.0-315/kafka/bin/kafka-console-producer.sh --topic dd.topic1 --broker-list bigdataanalytics-worker-0.novalocal:6667 
+
+# Run consumer in another terminal session
+# This command enables messages from producer in console output
+# In this case, the messages arrive in the same order because this topic has only one partition
+/usr/hdp/3.1.4.0-315/kafka/bin/kafka-console-consumer.sh --topic dd.topic1 --from-beginning --bootstrap-server bigdataanalytics-worker-0.novalocal:6667 
+
+# Stop the consumer process (Ctrl+C)
+# Run the consumer without the from-beginning option - it will read only new messages sent by the producer
+/usr/hdp/3.1.4.0-315/kafka/bin/kafka-console-consumer.sh --topic dd.topic1 --bootstrap-server bigdataanalytics-worker-0.novalocal:6667 
+
+# Stop the consumer process (Ctrl+C)
+
+# Delete the topic
+/usr/hdp/3.1.4.0-315/kafka/bin/kafka-topics.sh --zookeeper bigdataanalytics-worker-3.novalocal:2181 --delete --topic dd.topic1
