@@ -20,115 +20,112 @@ def console_output(df, freq):
         .options(truncate=True) \
         .start()
 
-
-# read without streaming
-raw_orders = spark.read. \
+# create topic "yelp_tips" using kafka-topics.sh
+# send serialized JSON to the topic using kafka-console-producer.sh
+# here, in Spark, read the topic without streaming
+raw_tips = spark.read. \
     format("kafka"). \
     option("kafka.bootstrap.servers", kafka_brokers). \
-    option("subscribe", "orders_json"). \
+    option("subscribe", "yelp_tips"). \
     option("startingOffsets", "earliest"). \
     load()
 
-raw_orders.show()
-raw_orders.show(1,False)
-
-raw_locations = spark.read. \
-    format("kafka"). \
-    option("kafka.bootstrap.servers", kafka_brokers). \
-    option("subscribe", "dd_locations"). \
-    option("startingOffsets", "earliest"). \
-    load()
-
-raw_locations.show()
+raw_tips.show()
+raw_tips.show(1, False)
 
 # read offsets 0-10
-raw_locations = spark.read. \
+raw_tips = spark.read. \
     format("kafka"). \
     option("kafka.bootstrap.servers", kafka_brokers). \
-    option("subscribe", "dd_locations"). \
+    option("subscribe", "yelp_tips"). \
     option("startingOffsets", "earliest"). \
-    option("endingOffsets", """{"orders_json":{"0":10}}"""). \
+    option("endingOffsets", """{"yelp_tips":{"0":10}}"""). \
     load()
 
-raw_locations.show(100)
+raw_tips.show(100)
 
-# read all
-raw_locations = spark.readStream. \
+# read all to stream DF
+raw_tips = spark.readStream. \
     format("kafka"). \
     option("kafka.bootstrap.servers", kafka_brokers). \
-    option("subscribe", "dd_locations"). \
+    option("subscribe", "yelp_tips"). \
     option("startingOffsets", "earliest"). \
     load()
 
-out = console_output(raw_locations, 5)
+out = console_output(raw_tips, 5)
 out.stop()
 
 # read in batches of 5
-raw_locations = spark.readStream. \
+raw_tips = spark.readStream. \
     format("kafka"). \
     option("kafka.bootstrap.servers", kafka_brokers). \
-    option("subscribe", "dd_locations"). \
+    option("subscribe", "yelp_tips"). \
     option("startingOffsets", "earliest"). \
     option("maxOffsetsPerTrigger", "5"). \
     load()
 
-out = console_output(raw_locations, 5)
+out = console_output(raw_tips, 5)
 out.stop()
 
 
 # read once from end
-raw_locations = spark.readStream. \
+raw_tips = spark.readStream. \
     format("kafka"). \
     option("kafka.bootstrap.servers", kafka_brokers). \
-    option("subscribe", "dd_locations"). \
+    option("subscribe", "yelp_tips"). \
     option("maxOffsetsPerTrigger", "5"). \
     option("startingOffsets", "latest"). \
     load()
 
-out = console_output(raw_locations, 5)
+out = console_output(raw_tips, 5)
 out.stop()
 
 
-# read offsets 0-10
-raw_locations = spark.readStream. \
+# read offsets 0-10 in batches of 5
+raw_tips = spark.readStream. \
     format("kafka"). \
     option("kafka.bootstrap.servers", kafka_brokers). \
-    option("subscribe", "dd_locations"). \
-    option("startingOffsets", """{"orders_json":{"0":10}}"""). \
+    option("subscribe", "yelp_tips"). \
+    option("startingOffsets", """{"yelp_tips":{"0":10}}"""). \
     option("maxOffsetsPerTrigger", "5"). \
     load()
 
-out = console_output(raw_locations, 5)
+out = console_output(raw_tips, 5)
 out.stop()
 
 # parse value
 # define schema
-locations_schema = StructType() \
-    .add("timestamp", IntegerType()) \
-    .add("latitude", IntegerType()) \
-    .add("longitude", IntegerType()) \
-    .add("accuracy", IntegerType())
+tips_schema = StructType() \
+    .add("user_id", StringType()) \
+    .add("business_id", StringType()) \
+    .add("text", StringType()) \
+    .add("date", StringType()) \
+    .add("compliment_count", IntegerType())
 
-value_locations = raw_locations \
-    .select(F.from_json(F.col("value").cast("String"), locations_schema).alias("value"), "offset")
+# read the yelp_tips columns: "value" as json, "offset" as is
+value_tips = raw_tips \
+    .select(F.from_json(F.col("value").cast("String"), tips_schema) \
+    .alias("value"), "offset")
 
-value_locations.printSchema()
+value_tips.printSchema()
 
-parsed_locations = value_locations.select("value.*", "offset")
+# in this dataframe, the columns from "value" and the "offset" column
+# will be on the same level
+parsed_tips = value_tips.select("value.*", "offset")
 
-parsed_locations.printSchema()
+parsed_tips.printSchema()
 
-out = console_output(parsed_locations, 30)
+out = console_output(parsed_tips, 30)
 out.stop()
 
 # add checkpoint
-def console_output_checkpointed(df, freq):
+def console_output_checkpoint(df, freq):
     return df.writeStream \
         .format("console") \
         .trigger(processingTime='%s seconds' % freq) \
-        .option("truncate",False) \
-        .option("checkpointLocation", "locations_console_checkpoint") \
+        .option("truncate", False) \
+        .option("checkpointLocation", "tips_console_checkpoint") \
         .start()
 
-out = console_output_checkpointed(parsed_locations, 5)
+out = console_output_checkpoint(parsed_tips, 5)
 out.stop()
