@@ -5,17 +5,17 @@ ssh -i ~/.ssh/id_rsa_BD_228_ddoni BD_228_ddoni@bigdataanalytics-worker-0.novaloc
 mkdir input_data
 
 # in another terminal session, run scp locally to upload a CSV file from the local file system to the cluster file system
-scp ~/Downloads/russian_demography.csv BD_228_ddoni@bigdataanalytics-worker-0.novalocal:/home/BD_228_ddoni/input_data/russian_demography.csv
+scp ~/Downloads/e-commerce.csv BD_228_ddoni@bigdataanalytics-worker-0.novalocal:/home/BD_228_ddoni/input_data/e-commerce.csv
 
 # go back to the ssh session, make sure the file has been uploaded to the cluster
 ls -la input_data
-head -10 input_data/russian_demography.csv
+head -10 input_data/e-commerce.csv
 
 # create a directory in HDFS for source CSV files
 hdfs dfs -mkdir /user/BD_228_ddoni/input_csv_for_stream/
 
 # load the CSV file to HDFS
-hdfs dfs -copyFromLocal input_data/russian_demography.csv /user/BD_228_ddoni/input_csv_for_stream/
+hdfs dfs -copyFromLocal input_data/e-commerce.csv /user/BD_228_ddoni/input_csv_for_stream/
 
 # check the directory in HDFS, the CSV file is there
 hdfs dfs -ls /user/BD_228_ddoni/input_csv_for_stream/
