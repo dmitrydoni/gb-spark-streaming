@@ -1,0 +1,58 @@
+# CASSANDRA
+# Cassandra is running on worker2, but can be accessed from any other node
+
+# Run on worker2 to start Cassandra if it's down
+/cassandra/bin/cassandra
+
+# Run on any worker to connect to Cassandra by IP address of worker2
+/cassandra/bin/cqlsh 10.0.0.18
+
+# Keyspace is a namespace that defines data replication on nodes
+# A cluster contains one keyspace per node
+CREATE KEYSPACE lesson7
+   WITH REPLICATION = { 
+      'class' : 'SimpleStrategy', 'replication_factor' : 1 } ;
+
+# create table
+CREATE TABLE animals
+(id int, 
+name text,
+size text,
+primary key (id));
+
+# insert new record
+insert into animals (id, name, size)
+values (3, 'Deer', 'Big');
+
+select * from animals;
+
+# update record with id=3
+insert into animals (id, name)
+values (3, 'Doe' );
+
+# insert new record
+insert into animals (id, name)
+values (5, 'Snake');
+
+# won't work
+delete id from animals where id = 3;
+
+# works fine, can be used instead of delete
+insert into animals (id, name, size)
+values (3, null, null);
+
+
+# HBASE:
+
+# Run on any node:
+hbase shell
+
+create_namespace 'lesson7'
+create 'lesson7:animals', 'name', 'size'
+
+put 'lesson7:animals', '3', 'name', 'Deer'
+put 'lesson7:animals', '3', 'size', 'Big'
+put 'lesson7:animals', '5', 'name', 'Snake'
+
+put 'lesson7:animals', '3', 'name', 'Doe'
+delete 'lesson7:animals', '5'
