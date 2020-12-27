@@ -1,0 +1,39 @@
+# SSH to the server
+ssh -i ~/.ssh/id_rsa_BD_228_ddoni BD_228_ddoni@bigdataanalytics-worker-0.novalocal
+
+# create a directory on the file system for scripts to use in Spark Submit
+mkdir ecommerce_submit
+
+# in another terminal session, run scp locally to upload the scripts to the file system
+scp ~/Downloads/7.spark-submit-batch.py BD_228_ddoni@bigdataanalytics-worker-0.novalocal:/home/BD_228_ddoni/ecommerce_submit/7.spark-submit-batch.py
+scp ~/Downloads/7.1_spark-submit_stream.py BD_228_ddoni@bigdataanalytics-worker-0.novalocal:/home/BD_228_ddoni/ecommerce_submit/7.1_spark-submit_stream.py
+scp ~/Downloads/7.2_spark-submit_stream_stable.py BD_228_ddoni@bigdataanalytics-worker-0.novalocal:/home/BD_228_ddoni/ecommerce_submit/7.2_spark-submit_stream_stable.py
+
+# back to the SSH session, verify that *.py script files are there
+ls -la ~/ecommerce_submit
+
+# BATCH
+# run Spark Submit with the script for batch
+/spark2.4/bin/spark-submit ~/ecommerce_submit/7.spark-submit-batch.py
+
+# if the environment variable $? is 0, then the spark-submit command was executed successfully
+echo $?
+
+# check that new Parquet files are created in the script output directory 
+hdfs dfs -ls ecommerce_submit_parquet_files
+
+# STREAM: Write into one directory and stop stream
+# run Spark Submit with the script for stream
+/spark2.4/bin/spark-submit ~/ecommerce_submit/7.1_spark-submit_stream.py
+
+# STREAM: Write into different directories and run stream infinitely
+# just in case, delete checkpoint files before running next script
+hdfs dfs -rm -r ecommerce_parquet_checkpoint
+
+# run Spark Submit with the script for stream
+# this time, will run it with a few parameters
+/spark2.4/bin/spark-submit --driver-memory 512m --driver-cores 1 --master local[1] ~/ecommerce_submit/7.2_spark-submit_stream_stable.py
+
+# delete all files from checkpoint and output directories
+hdfs dfs -rm -r /user/BD_228_ddoni/ecommerce_parquet_checkpoint/*
+hdfs dfs -rm -r /user/BD_228_ddoni/ecommerce_submit_parquet_files/*
